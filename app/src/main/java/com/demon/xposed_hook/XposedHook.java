@@ -163,12 +163,18 @@ public class XposedHook implements IXposedHookLoadPackage {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        XposedBridge.log("调用Settings.Secure.getString获取了" + param.args[1]);
+                        XposedBridge.log("调用Settings.Secure.getString获取了:" + param.args[1]);
                     }
 
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        XposedBridge.log(getMethodStack());
+                        boolean[] aa = {false};
+                        String log = getMethodStack(aa);
+                        if (aa[0]) {
+                            XposedBridge.log("这是系统调用的忽略");
+                        } else {
+                            XposedBridge.log(log);
+                        }
                         super.afterHookedMethod(param);
                     }
                 }
@@ -240,12 +246,18 @@ public class XposedHook implements IXposedHookLoadPackage {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        XposedBridge.log("调用SystemProperties获取设备序列号");
+                        XposedBridge.log("调用SystemProperties获取了:" + param.args[0]);
                     }
 
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        XposedBridge.log(getMethodStack());
+                        boolean[] aa = {false};
+                        String log = getMethodStack(aa);
+                        if (aa[0]) {
+                            XposedBridge.log("这是系统调用的忽略");
+                        } else {
+                            XposedBridge.log(log);
+                        }
                         super.afterHookedMethod(param);
                     }
                 }
@@ -272,14 +284,35 @@ public class XposedHook implements IXposedHookLoadPackage {
     }
 
     private String getMethodStack() {
+        boolean[] aa = {false};
+        return getMethodStack(aa);
+    }
+
+    private String getMethodStack(boolean[] ignore) {
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
 
         StringBuilder stringBuilder = new StringBuilder();
 
-        for (StackTraceElement temp : stackTraceElements) {
-            stringBuilder.append(temp.toString() + "\n");
+//        for (StackTraceElement temp : stackTraceElements) {
+//            stringBuilder.append(temp.toString() + "\n");
+//        }
+        for (int i = 0; i < stackTraceElements.length; i++) {
+            if (i == 8) {
+                String log = stackTraceElements[i].toString();
+                String log2 = stackTraceElements[i + 1].toString();
+                if (log.startsWith("android.app") && log2.startsWith("android.app")) {
+                    ignore[0] = true;
+                } else if (log.startsWith("android.view") && log2.startsWith("android.view")) {
+                    ignore[0] = true;
+                } else if (log.startsWith("java.lang") && log2.startsWith("java.lang")) {
+                    ignore[0] = true;
+                } else {
+                    XposedBridge.log("不是系统的？？" + log + log2);
+                }
+            }
+            stringBuilder.append(stackTraceElements[i].toString() + "\n");
         }
-
+        XposedBridge.log("-------------------------------------------------------------------------------------------");
         return stringBuilder.toString();
 
 //        try
